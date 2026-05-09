@@ -5,7 +5,7 @@
 set -euo pipefail
 
 NETWORK="testnet"
-WASM="contracts/contracts/energy-trade/target/wasm32v1-none/release/energy_trade.wasm"
+WASM="contracts/target/wasm32v1-none/release/energy_trade.wasm"
 
 if [ -z "${ADMIN_SECRET_KEY:-}" ]; then
   echo "Error: ADMIN_SECRET_KEY is not set." >&2
