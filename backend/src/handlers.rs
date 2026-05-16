@@ -1,7 +1,7 @@
 use crate::db::DbPool;
 use crate::models::{EnergyTrade, NewEnergyTrade, TradeResponse};
 use crate::schema::trades;
-use actix_web::{get, post, web, HttpResponse, Responder};
+use actix_web::{HttpResponse, Responder, get, post, web};
 use chrono::Utc;
 use diesel::prelude::*;
 use log::{error, info, warn};
