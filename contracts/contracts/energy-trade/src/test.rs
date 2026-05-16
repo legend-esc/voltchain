@@ -1,10 +1,7 @@
 #![cfg(test)]
 #![allow(deprecated)]
 use super::*;
-use soroban_sdk::{
-    testutils::Address as _,
-    Env,
-};
+use soroban_sdk::{testutils::Address as _, Env};
 
 #[test]
 fn test_trade_and_storage() {
