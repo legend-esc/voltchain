@@ -1,11 +1,11 @@
-use actix_web::{App, HttpServer, web, middleware::Logger};
 use actix_cors::Cors;
+use actix_web::{App, HttpServer, middleware::Logger, web};
 use dotenvy::dotenv;
 
 mod config;
 mod db;
-mod models;
 mod handlers;
+mod models;
 mod schema;
 mod stellar_sync;
 
@@ -15,7 +15,11 @@ async fn main() -> std::io::Result<()> {
     env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
 
     let cfg = config::Config::from_env();
-    log::info!("Starting VoltChain Backend API on {}:{}", cfg.host, cfg.port);
+    log::info!(
+        "Starting VoltChain Backend API on {}:{}",
+        cfg.host,
+        cfg.port
+    );
 
     if cfg.contract_id.is_none() {
         log::warn!("CONTRACT_ID not set — on-chain integration disabled");
@@ -39,17 +43,19 @@ async fn main() -> std::io::Result<()> {
         let contract_id_clone = contract_id.clone();
         let soroban_rpc_url_clone = cfg.soroban_rpc_url.clone();
         let pool_clone = pool.clone();
-        
+
         tokio::spawn(async move {
             if let Err(e) = stellar_sync::sync_trade_events(
                 &contract_id_clone,
                 &soroban_rpc_url_clone,
                 &pool_clone,
-            ).await {
+            )
+            .await
+            {
                 log::error!("Background sync task failed: {}", e);
             }
         });
-        
+
         log::info!("Started background trade sync task");
     }
 

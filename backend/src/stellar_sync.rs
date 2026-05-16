@@ -1,11 +1,11 @@
-use log::{info, warn, error, debug};
-use diesel::prelude::*;
-use diesel::pg::PgConnection;
-use diesel::result::Error as DieselError;
-use diesel::associations::HasTable;
-use crate::models::{NewEnergyTrade, LedgerCursor, NewLedgerCursor};
-use crate::schema::{trades, ledger_cursors};
 use crate::db::DbPool;
+use crate::models::{LedgerCursor, NewEnergyTrade, NewLedgerCursor};
+use crate::schema::trades;
+use diesel::associations::HasTable;
+use diesel::pg::PgConnection;
+use diesel::prelude::*;
+use diesel::result::Error as DieselError;
+use log::{debug, error, info, warn};
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 use tokio::time::sleep;
@@ -61,12 +61,12 @@ pub async fn sync_trade_events(
     );
 
     let mut conn = pool.get()?;
-    
+
     // Get or create the ledger cursor for this contract
     let mut last_ledger = get_or_create_cursor(&mut conn, contract_id)?;
-    
+
     loop {
-        match poll_events_once(contract_id, soroban_rpc_url, &pool, last_ledger).await {
+        match poll_events_once(contract_id, soroban_rpc_url, pool, last_ledger).await {
             Ok(new_last_ledger) => {
                 if new_last_ledger > last_ledger {
                     info!("Synced events up to ledger {}", new_last_ledger);
@@ -77,7 +77,7 @@ pub async fn sync_trade_events(
                 error!("Error polling events: {}", e);
             }
         }
-        
+
         // Poll every 15 seconds
         sleep(Duration::from_secs(15)).await;
     }
@@ -90,7 +90,7 @@ async fn poll_events_once(
     start_ledger: u32,
 ) -> Result<u32, Box<dyn std::error::Error>> {
     let client = reqwest::Client::new();
-    
+
     let request_body = GetEventsRequest {
         start_ledger,
         filters: vec![EventFilter {
@@ -101,7 +101,7 @@ async fn poll_events_once(
     };
 
     let response = client
-        .post(&format!("{}/getEvents", soroban_rpc_url))
+        .post(format!("{}/getEvents", soroban_rpc_url))
         .json(&request_body)
         .send()
         .await?;
@@ -111,7 +111,7 @@ async fn poll_events_once(
     }
 
     let events_response: GetEventsResponse = response.json().await?;
-    
+
     if events_response.events.is_empty() {
         return Ok(events_response.latest_ledger);
     }
@@ -152,27 +152,33 @@ fn parse_trade_event(event: &SorobanEvent) -> Result<NewEnergyTrade, Box<dyn std
     // topic: ["TRADE"]
     // value: {
     //   "prosumer": "G...",
-    //   "consumer": "G...", 
+    //   "consumer": "G...",
     //   "amount_kwh": 123.45,
     //   "price_per_kwh": 0.123
     // }
-    
-    let value = event.value.as_object()
+
+    let value = event
+        .value
+        .as_object()
         .ok_or("Event value is not an object")?;
 
-    let prosumer = value.get("prosumer")
+    let prosumer = value
+        .get("prosumer")
         .and_then(|v| v.as_str())
         .ok_or("Missing prosumer field")?;
 
-    let consumer = value.get("consumer")
+    let consumer = value
+        .get("consumer")
         .and_then(|v| v.as_str())
         .ok_or("Missing consumer field")?;
 
-    let amount_kwh = value.get("amount_kwh")
+    let amount_kwh = value
+        .get("amount_kwh")
         .and_then(|v| v.as_f64())
         .ok_or("Missing or invalid amount_kwh field")?;
 
-    let price_per_kwh = value.get("price_per_kwh")
+    let price_per_kwh = value
+        .get("price_per_kwh")
         .and_then(|v| v.as_f64())
         .ok_or("Missing or invalid price_per_kwh field")?;
 
@@ -193,26 +199,31 @@ fn upsert_trade(
     // Check if trade with this tx_hash already exists
     // We'll use the trade ID as a proxy for tx_hash uniqueness
     // In a real implementation, you might want to store tx_hash separately
-    
+
     diesel::insert_into(trades::table)
         .values(new_trade)
         .on_conflict_do_nothing()
         .execute(conn)?;
 
-    debug!("Upserted trade: prosumer={}, consumer={}, amount={}kWh", 
-           new_trade.prosumer_address, new_trade.consumer_address, new_trade.amount_kwh);
-    
+    debug!(
+        "Upserted trade: prosumer={}, consumer={}, amount={}kWh",
+        new_trade.prosumer_address, new_trade.consumer_address, new_trade.amount_kwh
+    );
+
     Ok(())
 }
 
-fn get_or_create_cursor(conn: &mut PgConnection, contract_id_str: &str) -> Result<u32, Box<dyn std::error::Error>> {
+fn get_or_create_cursor(
+    conn: &mut PgConnection,
+    contract_id_str: &str,
+) -> Result<u32, Box<dyn std::error::Error>> {
     use crate::schema::ledger_cursors::dsl::*;
-    
+
     let cursor: Option<LedgerCursor> = ledger_cursors
         .filter(contract_id.eq(contract_id_str))
         .first(conn)
         .optional()?;
-    
+
     match cursor {
         Some(c) => Ok(c.last_ledger as u32),
         None => {
@@ -222,11 +233,11 @@ fn get_or_create_cursor(conn: &mut PgConnection, contract_id_str: &str) -> Resul
                 contract_id: contract_id_str.to_string(),
                 last_ledger: 0,
             };
-            
+
             diesel::insert_into(ledger_cursors::table())
                 .values(&new_cursor)
                 .execute(conn)?;
-            
+
             info!("Created new ledger cursor for contract {}", contract_id_str);
             Ok(0)
         }
@@ -239,10 +250,10 @@ fn update_cursor(
     last_ledger_val: u32,
 ) -> Result<(), DieselError> {
     use crate::schema::ledger_cursors::dsl::*;
-    
+
     diesel::update(ledger_cursors.filter(contract_id.eq(contract_id_str)))
         .set(last_ledger.eq(last_ledger_val as i64))
         .execute(conn)?;
-    
+
     Ok(())
 }

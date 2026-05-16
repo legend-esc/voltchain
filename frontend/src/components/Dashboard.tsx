@@ -29,10 +29,6 @@ export default function Dashboard() {
   const [trades, setTrades] = useState<Trade[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchTrades();
-  }, []);
-
   const fetchTrades = async () => {
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
     try {
@@ -41,7 +37,7 @@ export default function Dashboard() {
         const data = await res.json();
         setTrades(data);
       }
-    } catch (err) {
+    } catch (_err) {
       console.warn("Backend not available, using mock data");
       setTrades([
         { id: '1', prosumer_address: 'GB...123', consumer_address: 'GB...456', amount_kwh: 15.5, price_per_kwh: 0.12, timestamp: '2026-05-04T12:00:00Z' },
@@ -71,10 +67,15 @@ export default function Dashboard() {
       if (res.ok) {
         fetchTrades();
       }
-    } catch (err) {
+    } catch (_err) {
       setTrades([ { ...newTrade, timestamp: new Date().toISOString() }, ...trades ]);
     }
   };
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchTrades();
+  }, []);
 
   return (
     <div className="p-8 max-w-7xl mx-auto space-y-8">

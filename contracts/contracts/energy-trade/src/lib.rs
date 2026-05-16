@@ -1,4 +1,5 @@
 #![no_std]
+#![allow(deprecated)]
 use soroban_sdk::{contract, contractimpl, contracttype, symbol_short, Address, Env, Symbol, Vec};
 
 #[contracttype]
@@ -17,7 +18,13 @@ pub struct EnergyTradeContract;
 #[contractimpl]
 impl EnergyTradeContract {
     /// Record a trade between a prosumer and a consumer.
-    pub fn trade(env: Env, prosumer: Address, consumer: Address, amount_kwh: u32, price_per_kwh: u32) -> Symbol {
+    pub fn trade(
+        env: Env,
+        prosumer: Address,
+        consumer: Address,
+        amount_kwh: u32,
+        price_per_kwh: u32,
+    ) -> Symbol {
         prosumer.require_auth();
 
         let record = TradeRecord {
@@ -29,9 +36,15 @@ impl EnergyTradeContract {
         };
 
         // Store trade in a vector (simplified for demo, in production use map or specialized storage)
-        let mut trades: Vec<TradeRecord> = env.storage().persistent().get(&symbol_short!("TRADES")).unwrap_or(Vec::new(&env));
+        let mut trades: Vec<TradeRecord> = env
+            .storage()
+            .persistent()
+            .get(&symbol_short!("TRADES"))
+            .unwrap_or(Vec::new(&env));
         trades.push_back(record);
-        env.storage().persistent().set(&symbol_short!("TRADES"), &trades);
+        env.storage()
+            .persistent()
+            .set(&symbol_short!("TRADES"), &trades);
 
         // Emit trade event
         env.events().publish(
@@ -44,7 +57,10 @@ impl EnergyTradeContract {
 
     /// Retrieve all recorded trades.
     pub fn get_trades(env: Env) -> Vec<TradeRecord> {
-        env.storage().persistent().get(&symbol_short!("TRADES")).unwrap_or(Vec::new(&env))
+        env.storage()
+            .persistent()
+            .get(&symbol_short!("TRADES"))
+            .unwrap_or(Vec::new(&env))
     }
 }
 

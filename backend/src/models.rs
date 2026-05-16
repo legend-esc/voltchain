@@ -1,11 +1,10 @@
+use chrono::NaiveDateTime;
 use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use chrono::NaiveDateTime;
-use crate::schema::{trades, ledger_cursors};
 
 #[derive(Debug, Serialize, Deserialize, Queryable, Selectable, Insertable)]
-#[diesel(table_name = trades)]
+#[diesel(table_name = crate::schema::trades)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct EnergyTrade {
     pub id: Uuid,
@@ -29,7 +28,7 @@ pub struct TradeResponse {
 }
 
 #[derive(Deserialize, Insertable)]
-#[diesel(table_name = trades)]
+#[diesel(table_name = crate::schema::trades)]
 pub struct NewEnergyTrade {
     pub id: Uuid,
     pub prosumer_address: String,
@@ -39,7 +38,7 @@ pub struct NewEnergyTrade {
 }
 
 #[derive(Debug, Serialize, Deserialize, Queryable, Selectable, Insertable)]
-#[diesel(table_name = ledger_cursors)]
+#[diesel(table_name = crate::schema::ledger_cursors)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct LedgerCursor {
     pub id: Uuid,
@@ -49,10 +48,9 @@ pub struct LedgerCursor {
 }
 
 #[derive(Deserialize, Insertable)]
-#[diesel(table_name = ledger_cursors)]
+#[diesel(table_name = crate::schema::ledger_cursors)]
 pub struct NewLedgerCursor {
     pub id: Uuid,
     pub contract_id: String,
     pub last_ledger: i64,
 }
-

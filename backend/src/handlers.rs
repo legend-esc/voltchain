@@ -1,13 +1,12 @@
-use actix_web::{get, post, web, HttpResponse, Responder};
-use crate::models::{EnergyTrade, NewEnergyTrade, TradeResponse};
 use crate::db::DbPool;
+use crate::models::{EnergyTrade, NewEnergyTrade, TradeResponse};
 use crate::schema::trades;
-use diesel::prelude::*;
-use uuid::Uuid;
+use actix_web::{get, post, web, HttpResponse, Responder};
 use chrono::Utc;
-use log::{info, warn, error};
+use diesel::prelude::*;
+use log::{error, info, warn};
 use serde_json::json;
-use hex;
+use uuid::Uuid;
 
 #[get("/health")]
 pub async fn health_check() -> impl Responder {
@@ -81,7 +80,7 @@ pub async fn create_trade(
                 amount_kwh: trade.amount_kwh,
                 price_per_kwh: trade.price_per_kwh,
                 timestamp: trade.timestamp,
-                tx_hash: tx_hash,
+                tx_hash,
             };
             HttpResponse::Created().json(response)
         }
@@ -102,7 +101,7 @@ async fn invoke_trade_contract(
 ) -> Result<String, Box<dyn std::error::Error>> {
     // Create transaction using Soroban RPC
     let client = reqwest::Client::new();
-    
+
     // Build transaction payload for trade function call
     let transaction_data = json!({
         "source": admin_secret_key,
@@ -118,35 +117,32 @@ async fn invoke_trade_contract(
             ]
         }]
     });
-    
+
     // Submit transaction to Soroban RPC
     let response = client
         .post("https://soroban-testnet.stellar.org/transactions")
         .json(&transaction_data)
         .send()
         .await?;
-    
+
     if !response.status().is_success() {
         return Err(format!("Contract invocation failed: {}", response.status()).into());
     }
-    
+
     let result: serde_json::Value = response.json().await?;
-    
+
     // Extract transaction hash from response
     let tx_hash = result
         .get("hash")
         .and_then(|h| h.as_str())
         .ok_or("No transaction hash in response")?
         .to_string();
-    
+
     Ok(tx_hash)
 }
 
 #[get("/trades/{id}")]
-pub async fn get_trade(
-    pool: web::Data<DbPool>,
-    trade_id: web::Path<Uuid>,
-) -> impl Responder {
+pub async fn get_trade(pool: web::Data<DbPool>, trade_id: web::Path<Uuid>) -> impl Responder {
     let mut conn = pool.get().expect("couldn't get db connection from pool");
 
     let result = trades::table

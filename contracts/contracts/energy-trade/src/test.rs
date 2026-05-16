@@ -1,6 +1,10 @@
 #![cfg(test)]
+#![allow(deprecated)]
 use super::*;
-use soroban_sdk::{testutils::{Address as _, Events}, Env, vec};
+use soroban_sdk::{
+    testutils::Address as _,
+    Env,
+};
 
 #[test]
 fn test_trade_and_storage() {
@@ -25,5 +29,4 @@ fn test_trade_and_storage() {
     assert_eq!(trade.consumer, consumer);
     assert_eq!(trade.amount_kwh, 10);
     assert_eq!(trade.price_per_kwh, 50);
-
 }
