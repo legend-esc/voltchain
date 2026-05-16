@@ -27,7 +27,11 @@ async fn main() -> std::io::Result<()> {
         log::warn!("ADMIN_SECRET_KEY not set — on-chain contract calls disabled");
     }
 
-    let pool = db::init_pool();
+    log::info!("Database URL: [REDACTED]");
+    log::info!("Soroban RPC: {}", cfg.soroban_rpc_url);
+    log::info!("Network: {}", cfg.stellar_network);
+
+    let pool = db::init_pool(&cfg.database_url);
     let bind_addr = format!("{}:{}", cfg.host, cfg.port);
 
     // Spawn background sync task if contract_id is configured

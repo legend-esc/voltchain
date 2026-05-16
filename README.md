@@ -107,6 +107,16 @@ npm install
 npm run dev
 ```
 
+### 🐳 Run with Docker (Recommended)
+You can spin up the entire stack (Database, Redis, Backend, Frontend) using Docker Compose:
+
+```bash
+docker-compose up --build
+```
+- **API**: http://localhost:8080
+- **Dashboard**: http://localhost:3000
+- **Postgres**: localhost:5432
+
 ---
 
 ## 🔌 API Reference
